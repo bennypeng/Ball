@@ -42,41 +42,41 @@ class WxUserController extends Controller
         $signature     = $req->get('signature', '');
         $rawData       = $req->get('rawData', '');
 
-//        $openId = "oFulc5ccnq0bkolvgwZ_7w6ywIyI";
-//        $sessionKey = "hnWyfjYUZw1rwaBgW9fhfg==";
+      $openId = "oFulc5ccnq0bkolvgwZ_7w6ywIyI";
+      $sessionKey = "hnWyfjYUZw1rwaBgW9fhfg==";
 
-        // 获取session_key 和 openId
-        $sessionData   = $this->_getSessionData($jsCode);
-
-        Log::info('sessionId：' . $sessionId . ', sessionData：', $sessionData);
-
-        // 网络请求失败
-        if (!$sessionData)
-        {
-            return response()->json(Config::get('constants.NETWORK_ERROR'));
-        }
-
-        // 数据类型错误
-        if (!is_array($sessionData))
-        {
-            return response()->json(Config::get('constants.DATA_TYPE_ERROR'));
-        }
-
-        // 内部错误
-        if (isset($sessionData['errcode']) && $sessionData['errcode'])
-        {
-            Log::error('/api/user/login', $sessionData);
-            return response()->json(Config::get('constants.INTERNAL_ERROR'));
-        }
-
-        $openId     = $sessionData['openid'];
-        $sessionKey = $sessionData['session_key'];
-
-        // 数据签名校验
-        if ($rawData && !$sessionId && $signature != sha1($rawData . $sessionKey))
-        {
-            return response()->json(Config::get('constants.SIGNATURE_ERROR'));
-        }
+//        // 获取session_key 和 openId
+//        $sessionData   = $this->_getSessionData($jsCode);
+//
+//        Log::info('sessionId：' . $sessionId . ', sessionData：', $sessionData);
+//
+//        // 网络请求失败
+//        if (!$sessionData)
+//        {
+//            return response()->json(Config::get('constants.NETWORK_ERROR'));
+//        }
+//
+//        // 数据类型错误
+//        if (!is_array($sessionData))
+//        {
+//            return response()->json(Config::get('constants.DATA_TYPE_ERROR'));
+//        }
+//
+//        // 内部错误
+//        if (isset($sessionData['errcode']) && $sessionData['errcode'])
+//        {
+//            Log::error('/api/user/login', $sessionData);
+//            return response()->json(Config::get('constants.INTERNAL_ERROR'));
+//        }
+//
+//        $openId     = $sessionData['openid'];
+//        $sessionKey = $sessionData['session_key'];
+//
+//        // 数据签名校验
+//        if ($rawData && !$sessionId && $signature != sha1($rawData . $sessionKey))
+//        {
+//            return response()->json(Config::get('constants.SIGNATURE_ERROR'));
+//        }
 
         // 判断sessionId的合法性
         if ($sessionId && $sessionId != 'undefined')

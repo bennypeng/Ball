@@ -106,7 +106,7 @@ class UserBag extends Model
      * @param string $userId
      * @return array
      */
-    public function getUserBagBuyList($userId = '')
+    public function getUserBagBuyList($userId = '', $showKey = false)
     {
         if (!$userId) return array();
 
@@ -118,11 +118,9 @@ class UserBag extends Model
 
         $ret = [];
 
-        $myLevel = 100;  // 需要获取我的等级
-
-        $myGold  = 10000; // 需要获取我的金币
-
-        $myDiamond = 10000; // 需要获取我的钻石
+        // 获取用户信息
+        $wxUserModel = new WxUser();
+        $userInfo = $wxUserModel->getUserByUserId($userId);
 
         foreach($shopConf as $k => $v)
         {
@@ -132,7 +130,7 @@ class UserBag extends Model
             $costType = $v['costType'];
 
             // 解锁状态
-            if ($myLevel >= $v['unLockedLevel'])
+            if ($userInfo['level'] >= $v['unLockedLevel'])
             {
                 // 分享或广告类型
                 if (in_array($costType, [3, 4]))
@@ -144,18 +142,18 @@ class UserBag extends Model
                         // 金币
                         if (!isset($userBag[$k]))
                         {
-                            $unLocked = $myGold >= $costVal ? 1 : 0;
+                            $unLocked = $userInfo['gold'] >= $costVal ? 1 : 0;
                         } else {
-                            $unLocked = $myGold >= $costVal ? 2 : 3;
+                            $unLocked = $userInfo['gold'] >= $costVal ? 2 : 3;
                         }
                     } else if ($costType == 2)
                     {
                         // 钻石
                         if (!isset($userBag[$k]))
                         {
-                            $unLocked = $myDiamond >= $costVal ? 1 : 0;
+                            $unLocked = $userInfo['diamond'] >= $costVal ? 1 : 0;
                         } else {
-                            $unLocked = $myDiamond >= $costVal ? 2 : 3;
+                            $unLocked = $userInfo['diamond'] >= $costVal ? 2 : 3;
                         }
                     }
                 }
@@ -163,7 +161,7 @@ class UserBag extends Model
                 $unLocked = 0;
             }
 
-            $ret[$v['groupTab']][] = [
+            $data = [
                 (string)$v['itemId'],
                 (string)$level,
                 (string)$attack,
@@ -172,12 +170,25 @@ class UserBag extends Model
                 (string)$unLocked
             ];
 
+            // 是否需要带键名
+            if ($showKey)
+            {
+                $ret[$v['groupTab']][$v['itemId']] = $data;
+            } else {
+                $ret[$v['groupTab']][] = $data;
+            }
+
         }
 
         return $ret;
     }
 
 
+    /**
+     * 背包KEY
+     * @param string $userId
+     * @return string
+     */
     private function _getUserBagKey($userId = '')
     {
         return 'BALL_U_BAG_' . $userId;
