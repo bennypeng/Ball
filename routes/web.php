@@ -39,11 +39,4 @@ Route::get('res/{dir1}/{dir2}/{file}', function (){
 
 });
 
-//  测试vue页面
-//Route::group(['middleware' => ['cors']], function() {
-//    Route::get('/web', function() {
-//        return view('index');
-//    });
-//});
-
 

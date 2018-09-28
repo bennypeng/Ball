@@ -4,15 +4,12 @@ namespace App;
 
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Redis;
 
 class WxUser extends Model
 {
     protected $table      = 'users';
     protected $primaryKey = 'id';
-    //public    $timestamps = false;
-    //protected $dateFormat = 'U';
 
     /**
      * 注册用户
@@ -35,6 +32,7 @@ class WxUser extends Model
         if ($userId)
         {
             Redis::hmset($data['openId'], $data);
+            Redis::hmset($this->_getUserKey($userId), $data);
             return $userId;
         }
 
@@ -42,11 +40,38 @@ class WxUser extends Model
     }
 
     /**
+     * 更新用户信息
+     * @param string $userId
+     * @param array $update
+     * @return bool
+     */
+    public function updateUser($userId = '', $update = [])
+    {
+        if (!$userId || !$update) return false;
+
+        if (!WxUser::where('id', $userId)->update($update))
+        {
+            return false;
+        }
+
+        $key = $this->_getUserKey($userId);
+
+        if (!Redis::exists($key))
+        {
+            $this->getUserByUserId($userId);
+        }
+
+        Redis::hmset($key, $update);
+
+        return true;
+    }
+
+    /**
      * 通过openId获取用户信息
      * @param string $openId
      * @return array
      */
-    function getUserByOpenId($openId = '')
+    public function getUserByOpenId($openId = '')
     {
 
         if (!$openId) return array();
@@ -66,11 +91,37 @@ class WxUser extends Model
     }
 
     /**
+     * 通过userId获取用户信息
+     * @param string $userId
+     * @return array
+     */
+    public function getUserByUserId($userId = '')
+    {
+
+        if (!$userId) return array();
+
+        $key = $this->_getUserKey($userId);
+
+        if (Redis::exists($key))
+        {
+            return Redis::hgetall($key);
+        }
+
+        $userInfo = WxUser::where('id', $userId)->first();
+
+        if (!$userInfo) return array();
+
+        Redis::hmset($key, $userInfo->toArray());
+
+        return $userInfo;
+    }
+
+    /**
      * 通过sessionId获取userId
      * @param string $sessionId
      * @return bool|string
      */
-    function getUserIdBySessionId($sessionId = '')
+    public function getUserIdBySessionId($sessionId = '')
     {
         if (!$sessionId) return false;
 
@@ -90,7 +141,7 @@ class WxUser extends Model
      * @param string $sessionId
      * @return bool|string
      */
-    function getSKeyBySessionId($sessionId = '')
+    public function getSKeyBySessionId($sessionId = '')
     {
         if (!$sessionId) return false;
 
@@ -111,7 +162,7 @@ class WxUser extends Model
      * @param array $data
      * @return bool
      */
-    function setUserSessionId($key, $data = [])
+    public function setUserSessionId($key, $data = [])
     {
 
         if (!$key || !$data) return false;
@@ -124,49 +175,77 @@ class WxUser extends Model
     }
 
     /**
-     * 获取操作时间
+     * 获取障碍物地图
      * @param string $userId
-     * @return bool
+     * @return array
      */
-//    function getUserOpTs($userId = '')
-//    {
-//
-//        if (!$userId) return false;
-//
-//        $key = $this->getUserOpTsKey($userId);
-//
-//        return Redis::get($key);
-//    }
+    public function getUserHinderMap($userId = '')
+    {
+        if (!$userId) return [];
+
+        $key = $this->_getUserHinderMapKey($userId);
+
+        if (!Redis::exists($key)) return [];
+
+        $hinderMap = Redis::hgetall($key);
+
+        foreach($hinderMap as &$v)
+        {
+            $v = json_decode($v,true);
+        }
+
+        unset($v);
+
+        return $hinderMap;
+    }
 
     /**
-     * 设置操作时间
+     * 设置障碍物地图
      * @param string $userId
-     * @param string $ts
+     * @param array $data
      * @return bool
      */
-//    function setUserOpTs($userId = '', $ts = '')
-//    {
-//
-//        if (!$userId || !$ts) return false;
-//
-//        $key = $this->getUserOpTsKey($userId);
-//
-//        Redis::set($key, $ts);
-//
-//        Redis::expireAt($key, Carbon::now()->endOfDay()->timestamp);
-//
-//        return true;
-//    }
+    public function setUserHinderMap($userId = '', $data = [])
+    {
+        if (!$userId || !$data) return false;
 
-    function getUserSessionIdKey($sessionId = '')
+        foreach($data as &$v)
+        {
+            $v = json_encode($v);
+        }
+
+        unset($v);
+
+        $key = $this->_getUserHinderMapKey($userId);
+
+        Redis::hmset($key, $data);
+
+        return true;
+    }
+
+    /**
+     * 获取sessionkey
+     * @param string $sessionId
+     * @return string
+     */
+    public function getUserSessionIdKey($sessionId = '')
     {
         return 'BALL_SID_' . $sessionId;
     }
 
-//    function getUserOpTsKey($userId = '')
-//    {
-//        return 'BALL_U_OPTS_' . $userId;
-//    }
+    /**
+     * 障碍物key
+     * @param string $userId
+     * @return string
+     */
+    private function _getUserHinderMapKey($userId = '')
+    {
+        return 'BALL_U_HINDER_MAP_' . $userId;
+    }
 
+    private function _getUserKey($userId = '')
+    {
+        return 'BALL_U_' . $userId;
+    }
 
 }

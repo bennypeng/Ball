@@ -2,7 +2,6 @@
 
 namespace App;
 
-use App\Services\HelperService;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Redis;
@@ -38,11 +37,7 @@ class Shop extends Model
 
             $shopKeyConf = [];
 
-            //$helper = new HelperService();
-
             foreach($shopConfig as $k => $v) {
-                //$v['initVal'] = $helper->parseSc2Num($v['initVal']);
-                //$v['costVal'] = $helper->parseSc2Num($v['costVal']);
                 $shopKeyConf[$v['itemId']] = json_encode($v);
             }
 

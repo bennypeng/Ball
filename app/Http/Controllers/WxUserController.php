@@ -5,7 +5,6 @@ namespace App\Http\Controllers;
 use App\WxUser;
 use App\UserBag;
 use App\Shop;
-//use App\Snail;
 use Carbon\Carbon;
 use WXBizDataCrypt;
 use GuzzleHttp\Client;
@@ -19,16 +18,12 @@ class WxUserController extends Controller
     protected $wxUserModel;
     protected $userBagModel;
     protected $shopModel;
-//    protected $snailModel;
-//    protected $configModel;
 
     public function __construct()
     {
         $this->wxUserModel  = new WxUser;
         $this->userBagModel = new UserBag;
         $this->shopModel    = new Shop;
-//        $this->chapterModel = new Chapter;
-//        $this->configModel  = new \App\Config;
     }
 
     /**
@@ -47,9 +42,9 @@ class WxUserController extends Controller
         $signature     = $req->get('signature', '');
         $rawData       = $req->get('rawData', '');
 
-
 //        $openId = "oFulc5ccnq0bkolvgwZ_7w6ywIyI";
 //        $sessionKey = "hnWyfjYUZw1rwaBgW9fhfg==";
+
         // 获取session_key 和 openId
         $sessionData   = $this->_getSessionData($jsCode);
 
@@ -100,7 +95,6 @@ class WxUserController extends Controller
                 return response()->json(Config::get('constants.SESSIONID_EXP_ERROR'));
             }
 
-            $userData = $this->wxUserModel->getUserByOpenId($openId);
         } else {
 
             $userData = $this->wxUserModel->getUserByOpenId($openId);
@@ -145,8 +139,6 @@ class WxUserController extends Controller
                             'userId'      => $userId
                         ]);
 
-                        $userData = $this->wxUserModel->getUserByOpenId($openId);
-
                         Log::info('创建用户成功，userId:' . $userId);
 
                     } else {
@@ -178,40 +170,87 @@ class WxUserController extends Controller
             'session_key' => $sessionKey
         ]);
 
-        $userId          = $this->wxUserModel->getUserIdBySessionId($sessionId);
+        $userId    = $this->wxUserModel->getUserIdBySessionId($sessionId);
+        $shopList  = $this->userBagModel->getUserBagBuyList($userId);
+        $hinderMap = $this->wxUserModel->getUserHinderMap($userId);
+        $userData  = $this->wxUserModel->getUserByUserId($userId);
 
         //dd($this->userBagModel->getUserBag($userId));
         //dd($this->userBagModel->createUserItem(['userId' => $userId, 'itemId' => 'B003']));
         //dd($this->userBagModel->levelupUserItem($userId, 'B001'));
-        //return response()->json($this->userBagModel->getUserBagBuyList($userId));
         //dd($this->shopModel->getShopConf());
 
         return response()->json(
             array_merge(
                 array(
                     'sessionId'    => $sessionId,
-                    'userId'       => $userData['id'],
+                    'userId'       => $userId,
                     'offlineGold'  => 9999999,
                     'level'        => $userData['level'],
                     'levelPoint'   => $userData['levelPoint'],
                     'gold'         => $userData['gold'],
                     'diamond'      => $userData['diamond'],
                     'vip'          => $userData['vip'],
-                    'world'        => 0,
+                    'theme'        => 0,
                     'loginAward'   => 1,
-                    'hinderMap'    => [],
-                    'shopList'     => $this->userBagModel->getUserBagBuyList($userId, false)
+                    'hinderMap'    => $hinderMap,
+                    'shopList'     => $shopList
                 ),
                 Config::get('constants.SUCCESS')
             )
         );
     }
 
+    /**
+     * 同步用户数据
+     * @param Request $req
+     * @return \Illuminate\Http\JsonResponse
+     */
     public function sync(Request $req)
     {
-        /**
-         * @todo
-         */
+        $userId  = $req->get('userId', '');
+
+        $syncData = $req->get('data', '');
+
+        // 参数错误
+        if (!$syncData)
+        {
+            return response()->json(Config::get('constants.ARGS_ERROR'));
+        }
+
+        $syncData = json_decode($syncData, true);
+
+        // 参数错误
+        if (!isset($syncData['level']) || !isset($syncData['levelPoint']) || !isset($syncData['hinderMap']))
+        {
+            return response()->json(Config::get('constants.ARGS_ERROR'));
+        }
+
+        // 校验障碍物数据合法性
+        if (count($syncData['hinderMap']) > 0)
+        {
+            foreach ($syncData['hinderMap'] as $v)
+            {
+                if (count($v) != 3)
+                {
+                    Log::error('同步数据失败，userId：' . $userId . ", data：", $syncData);
+                    return response()->json(Config::get('constants.FAILURE'));
+                }
+            }
+
+            // 同步障碍物信息
+            $this->wxUserModel->setUserHinderMap($userId, $syncData['hinderMap']);
+        }
+
+        // 同步关卡及关卡进度信息
+        $this->wxUserModel->updateUser($userId, [
+            'level'      => (int)$syncData['level'],
+            'levelPoint' => (int)$syncData['levelPoint'],
+        ]);
+
+        Log::info('同步数据成功，userId：' . $userId . ", data：", $syncData);
+
+        return response()->json(Config::get('constants.SUCCESS'));
     }
 
     /**
