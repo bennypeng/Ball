@@ -30,9 +30,9 @@ class UserBag extends Model
         {
             $userBag = UserBag::where('userId', $userId)->get();
 
-            if (!$userBag) return array();
-
             $userBagArr = $userBag->toArray();
+
+            if (!$userBagArr) return array();
 
             $arr = [];
 

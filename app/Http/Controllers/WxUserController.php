@@ -47,9 +47,9 @@ class WxUserController extends Controller
         $signature     = $req->get('signature', '');
         $rawData       = $req->get('rawData', '');
 
-//
+
 //        $openId = "oFulc5ccnq0bkolvgwZ_7w6ywIyI";
-//        $sessionKey = "viQ371+56lzCWeItHWXhhw==";
+//        $sessionKey = "hnWyfjYUZw1rwaBgW9fhfg==";
         // 获取session_key 和 openId
         $sessionData   = $this->_getSessionData($jsCode);
 
@@ -184,7 +184,7 @@ class WxUserController extends Controller
         //dd($this->userBagModel->createUserItem(['userId' => $userId, 'itemId' => 'B003']));
         //dd($this->userBagModel->levelupUserItem($userId, 'B001'));
         //return response()->json($this->userBagModel->getUserBagBuyList($userId));
-//dd($this->shopModel->getShopConf());
+        //dd($this->shopModel->getShopConf());
 
         return response()->json(
             array_merge(
