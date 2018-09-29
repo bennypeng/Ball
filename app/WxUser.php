@@ -31,7 +31,7 @@ class WxUser extends Model
 
         if ($userId)
         {
-            Redis::hmset($data['openId'], $data);
+            Redis::hmset($this->_getOpenIdKey($data['openId']), $data);
             Redis::hmset($this->_getUserKey($userId), $data);
             return $userId;
         }
@@ -76,16 +76,18 @@ class WxUser extends Model
 
         if (!$openId) return array();
 
-        if (Redis::exists($openId))
+        $key = $this->_getOpenIdKey($openId);
+
+        if (Redis::exists($key))
         {
-            return Redis::hgetall($openId);
+            return Redis::hgetall($key);
         }
 
         $userInfo = WxUser::where('openId', $openId)->first();
 
         if (!$userInfo) return array();
 
-        Redis::hmset($openId, $userInfo->toArray());
+        Redis::hmset($key, $userInfo->toArray());
 
         return $userInfo;
     }
@@ -246,6 +248,11 @@ class WxUser extends Model
     private function _getUserKey($userId = '')
     {
         return 'BALL_U_' . $userId;
+    }
+
+    private function _getOpenIdKey($openId = '')
+    {
+        return 'BALL_' . $openId;
     }
 
 }
